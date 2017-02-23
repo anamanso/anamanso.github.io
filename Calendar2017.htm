@@ -1,0 +1,620 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <base href="http://www.calpoly.edu/%7Ejdalbey/CalendarMaker.html"><!-- removed -->
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>Creador de calendario en HTML</title>
+  <meta content="John Dalbey" name="author">
+  <script language="javascript">
+/*
+HTML Calendar Maker. Copyright (C) 2009 John Dalbey.
+http://www.csc.calpoly.edu/~jdalbey
+
+Purpose: Generate an HTML calendar for a given number of months.
+Usage: Fill in the form with the desired settings and click Submit.
+       The generated HTML calendar will appear in a popup window.
+Contributions by Jasmin Vanta.
+Modified 1/5/08 to fix leap year defect.
+Version 1.1 5/2/09 allow selecting day of week for first column
+*/
+// html code for the beginning setup of the calendar
+var begTags = "<center><H2><font size=\"2\" face=\"Verdana\">";
+	
+	
+// html code for end of the month
+var endTags = "</TR></TBODY></TABLE><br>";
+
+var monthName = "somemonth";
+var yearName = "someyear";
+var numberOfDays = 0;       // days in the month
+var postDay = 0;            // day of the week the day after the last day of the month falls on (mod 7)
+var numBlankDays = 0;       // number of "blank" days at the start of the month
+var cellsHTML = "";         // HTML string
+var generator;
+
+// Constant array of month names
+var months=new Array;
+months[1] = "Enero";
+months[2] = "Febrero";
+months[3] = "Marzo";
+months[4] = "Abril";
+months[5] = "Mayo";
+months[6] = "Junio";
+months[7] = "Julio";
+months[8] = "Agosto";
+months[9] = "Septiembre";
+months[10] = "Octubre";
+months[11] = "Noviembre";
+months[12] = "Deciembre";
+
+// Constant array of days of the week
+var daysOfWeekLong = new Array;
+daysOfWeekLong[1] = "Domingo";
+daysOfWeekLong[2] = "Lunes";
+daysOfWeekLong[3] = "Martes";
+daysOfWeekLong[4] = "Miercoles";
+daysOfWeekLong[5] = "Jueves";
+daysOfWeekLong[6] = "Viernes";
+daysOfWeekLong[7] = "Sabado";
+daysOfWeekLong[8] = "Domingo";
+var daysOfWeekShort = new Array;
+daysOfWeekShort[1] = "Dom";
+daysOfWeekShort[2] = "Lun";
+daysOfWeekShort[3] = "Mar";
+daysOfWeekShort[4] = "Mie";
+daysOfWeekShort[5] = "Jue";
+daysOfWeekShort[6] = "Vie";
+daysOfWeekShort[7] = "Sab";
+daysOfWeekShort[8] = "Dom";
+
+// Build the row that contains the day names
+function columnHeaders()
+{
+    var result = "";
+    var weekStart = document.CalendarSettings.WeekStart.value;
+
+    var weekHead2 = "</font></H2></center><TABLE width=\"100%\" border=1 bordercolordark=\"#000000\" bordercolorlight=\"#FFFFFF\" cellpadding=\"5\">" + "\n" + "<TBODY><TR>";
+
+    var weekHead3 = "<TH valign=center align=middle width=\"14%\" bgcolor=\"#000000\"><font size=\"1\" color=\"#FFFFFF\" face=\"Verdana\">"+"\n";
+    var weekHead4 = "</font></TH>";
+
+        result += weekHead2;
+        var currday;
+		for(var day = 1; day <= 7; day++)
+        {
+            result += weekHead3;
+            currday = day + (weekStart - 1);
+            // determine whether to use long or short day names
+        	if (document.CalendarSettings.names[1].checked) 
+            {
+                result += daysOfWeekShort[currday];
+            }
+            else
+            {
+                result += daysOfWeekLong[currday];
+            }               
+
+            result += weekHead4;
+        }
+        result += "</TR><TR>";
+    return result;
+}
+
+// Determine the number of days in the month and the starting/ending dates
+function createMonth(inputMonth, inputYear, inputDay)
+{
+        var leapYear = false;   
+		monthName = months[inputMonth];
+        yearName = inputYear.toString();
+		cellsHTML = "";
+        numBlankDays = inputDay;
+		//figure out if the year is a leap year
+		if(inputYear%4 == 0)	
+		{
+		   	if(inputYear%100 != 0)
+  			{
+				leapYear = true;
+			}
+			else
+			{
+				if(inputYear%400 == 0)
+					leapYear = true;
+				else
+					leapYear = false;
+			}
+		}
+
+		
+		//figure out the number of days in the month
+		//if month is NOT february, april, june, september, nor november then it has 31 days
+		if(inputMonth != 2 && inputMonth  != 4 && inputMonth != 6 && inputMonth != 9 && inputMonth != 11)
+		{
+			numberOfDays = 31;
+		}
+		else
+		{
+			//if month is NOT february, then it has 30 days
+			if(inputMonth != 2)
+			{
+				numberOfDays = 30;
+			}
+			else
+			{
+				//if month is a leap year, then it has 29 days. if not, it has 28
+				if(leapYear)
+				{
+					numberOfDays = 29;
+				}
+				else
+				{
+					numberOfDays = 28;
+				}				
+			}
+		}
+		
+		postDay = (numberOfDays + numBlankDays) % 7;  // day after end of month
+}
+
+// produce the HTML code for a month calendar	
+function getMonth()
+{
+        // determine which font size to use for dates. 
+        var fontsize=1;
+		if (document.CalendarSettings.fontsize[0].checked) fontsize=1;
+		if (document.CalendarSettings.fontsize[1].checked) fontsize=3;
+		if (document.CalendarSettings.fontsize[2].checked) fontsize=5;
+		if (document.CalendarSettings.fontsize[3].checked) fontsize=7;
+
+		//integer to keep track of how many days were added to the month in the html string
+		cellCount = 0;
+		
+		//prints out blank cells needed to start off month calendar
+		for(var blanks = 0; blanks < numBlankDays; blanks++)
+		{
+				cellsHTML = cellsHTML + "<TD vAlign=top align=left width=\"14%\" >&nbsp;<br><br><br><br></TD>";
+                cellsHTML += "\n";
+				cellCount++;
+		}
+		
+		//prints out cells for each day of the month
+		for(var days = 1; days <= numberOfDays; days++)
+		{
+			cellsHTML = cellsHTML + "<TD vAlign=top align=left width=\"14%\" ><font size=\""+fontsize+"\" face=\"Verdana\">" +days +"</font><br><br><br><br></TD>";
+            cellsHTML += "\n";
+    		cellCount++;
+			if(cellCount % 7 == 0)
+			{
+				cellsHTML = cellsHTML + "</tr><tr>";
+                cellsHTML += "\n";
+			}
+		}
+		
+		//prints out blank cells needed to end off month calendar
+		while (cellCount % 7 != 0)
+		{
+			cellsHTML = cellsHTML + "<TD vAlign=top align=left width=\"14%\" >&nbsp;<br><br></TD>";
+            cellsHTML += "\n";
+    		cellCount++;
+		}
+		
+		//returns full html code for the month
+		return begTags + monthName + " " + yearName + "\n" + columnHeaders() + "\n" + cellsHTML + endTags;
+}
+
+// Show the complete calendar in a popup window
+function showCalendar()
+{
+		var currentMonth = document.CalendarSettings.Month.value;
+		var currentYear = document.CalendarSettings.Year.value;
+        // See if user provided a custom year input
+        if (document.CalendarSettings.SpecialYear.value != "")
+        {
+            special = document.CalendarSettings.SpecialYear.value;
+            if (special < 1 || special > 9999)
+            {
+                alert ("Year not in range 1 - 9999, using year 2000.");
+                special = 2000;
+            }
+            currentYear = special.toString();
+        }
+      // Use Date function to return starting day of week for the month
+      // Note that Date uses base zero numbering for month and day.
+      var startDate = new Date(currentYear, currentMonth-1, 1);
+      var startDay = startDate.getDay();
+      if (document.CalendarSettings.WeekStart.value == 2)
+      {
+      		startDay = (startDate.getDay() - 1);
+            if (startDay == -1) startDay = 6;
+      }
+	  var monthLimit = document.CalendarSettings.numMonths.value;
+        
+        generator=window.open("","name","height=450,width=700,resizable=1,scrollbars=1,menubar=1");
+    
+        generator.document.write("<html><head><title>Calendar"+currentYear);
+        generator.document.write("</title>");
+        generator.document.write("</head><body onload='window.focus();'>");
+        generator.document.write("\n");
+
+        //Iterate for as many months as user desires. 
+		for(var index = 0; index < monthLimit; index++)
+		{
+            createMonth( currentMonth, currentYear, startDay);
+            generator.document.write(getMonth());
+            generator.document.write("\n");
+            // Increment year if it's December
+    		if(currentMonth == 12 )
+			{
+				currentYear++;
+			}
+			currentMonth = currentMonth%12 + 1;
+            // post day of this month becomes start day of next month
+            startDay = postDay; 
+		}
+
+        generator.document.write("<center><font size=1>generado por ");
+        generator.document.write("<a href=\"http://www.calpoly.edu/~jdalbey/CalendarMaker.html\">HTML Calendar Maker 1.1.</a> Copyright (C) 2009 John Dalbey.</font>");
+        generator.document.write("</center>");
+        generator.document.write("</body></html>");
+        generator.document.close();
+}
+
+// Form reset
+function reset()
+{
+		document.CalendarSettings.Month.value = 1;
+		document.CalendarSettings.Year.value = 2008;
+		document.CalendarSettings.SpecialYear.value = "";
+		document.CalendarSettings.Day.value = 1;
+		document.CalendarSettings.numMonths.value = 1;       
+}
+
+function referenceCalendar() 
+{
+window.open("http://www.vrtisworks.com/kiki/fun/minical.htm","newWindow","toolbar=no,width=300,height=400,directories=no,status=no,scrollbars=yes,resize=yes,menubar=no")
+}
+  </script>
+</head>
+<body background="BackdiktGreenLight.gif">
+<h2 align="center">Creador de calendario en HTML</h2>
+<center>Cree un calendario mensual imprimible gratis.
+<small>(<a href="CalendarMaker.html">English</a>)</small></center>
+<hr>
+<p>
+<table width="88%" align="center">
+  <tbody>
+    <tr>
+      <td>
+      <form name="CalendarSettings"
+ action="http://66.163.168.225/babelfish/translate_url_content"><input
+ name=".intl" value="us" type="hidden"><input name="lp" value="en_es"
+ type="hidden"><input name="trurl"
+ value="http://www.calpoly.edu/~jdalbey/CalendarMaker.html"
+ type="hidden">Seleccione el año:
+        <select name="Year">
+        <option value="2011" selected="selected">2011 </option>
+        <option value="2012">2012 </option>
+        <option value="2013">2013 </option>
+        <option value="2014">2014 </option>
+        <option value="2015">2015 </option>
+        <option value="2016">2016 </option>
+        <option value="2017">2017 </option>
+        </select>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <b><i>O</i></b> escriba el año
+como número de 4 dígitos: <input name="SpecialYear" size="3"
+ type="text">
+        <p>Seleccione el número de meses para incluir en el calendario:
+        <select name="numMonths">
+        <option value="1" selected="selected">1 </option>
+        <option value="2">2 </option>
+        <option value="3">3 </option>
+        <option value="4">4 </option>
+        <option value="5">5 </option>
+        <option value="6">6 </option>
+        <option value="7">7 </option>
+        <option value="8">8 </option>
+        <option value="9">9 </option>
+        <option value="10">10 </option>
+        <option value="11">11 </option>
+        <option value="12">12 </option>
+        </select>
+        <br>
+Seleccione el mes de inicio:
+        <select name="Month">
+        <option value="1" selected="selected">Enero </option>
+        <option value="2">Febrero </option>
+        <option value="3">Marzo </option>
+        <option value="4">Abril </option>
+        <option value="5">Mayo </option>
+        <option value="6">Junio </option>
+        <option value="7">Julio </option>
+        <option value="8">Agosto </option>
+        <option value="9">Septiembre </option>
+        <option value="10">Octubre </option>
+        <option value="11">Noviembre </option>
+        <option value="12">Diciembre </option>
+        </select>
+        <br>
+Seleccione el día de semana para la primera columna:
+        <select name="WeekStart">
+        <option value="1" selected="selected">Domingo </option>
+        <option value="2">Lunes </option>
+        </select>
+        <br>
+Elija cómo desea que aparezcan los nombres del día: <input name="names"
+ value="long" checked="checked" type="radio"> Largo
+(domingo, lunes,…) <input name="names" value="shrt" type="radio">Corto
+(Dom, Lun,…) <br>
+Elija el tamaño de fuente para las fechas: <input name="fontsize"
+ value="small" type="radio">Pequeño <input name="fontsize"
+ value="regular" checked="checked" type="radio">Regular <input
+ name="fontsize" value="large" type="radio">Grande <input
+ name="fontsize" value="extralarge" type="radio">Muy Grande </p>
+        <table width="60%" cellpadding="2" cellspacing="2">
+          <tbody>
+            <tr>
+              <td valign="top"> <input name="submit" value="Crear"
+ onclick="showCalendar()" type="button"></td>
+              <td> <input name="reset" value="Borrar"
+ onclick="scroll(0,0);reset()" type="button"></td>
+            </tr>
+          </tbody>
+        </table>
+      </form>
+      </td>
+    </tr>
+  </tbody>
+</table>
+</p>
+<hr>
+<table width="100%" cellpadding="2" cellspacing="2">
+  <tbody>
+    <tr>
+      <td valign="top">
+      <p>Ésta es una herramienta rápida y simple que hice para crear
+calendarios en HTML que los estudiantes podran utilizar para propósitos
+de planeamiento. Es un formato básico sin características de lujo, pero
+fácil de utilizar. <br>
+      <b>Requisitos:</b> Usted debe tener el Javascript y popups
+permitidos en su navegador.<br>
+      <b>Procedimiento:</b> Rellene los campos y teclee “Crear” El
+calendario aparecerá en una ventana pop. Usted puede salvar el código
+fuente de la página y pegarlo en su propio sitio web. Puede además
+modificar el calendario para cubrir sus necesidades particulares. 
+<br>
+      <b>Advertencia:</b> Por favor Usted debe comprobar los resultados
+minuciosamente a mano. No doy ninguna garantía sobre la aptitud de uso
+para ningun propósito particular.<br>
+      <b>Aviso legal:</b> Usted puede usar, modificar, o publicar en la
+web el calendario generado para fines no comerciales. Sólo pido que
+deje el texto "generado por" en la parte inferior de la página.</p>
+      <p>El código de programación subyacente que crea el calendario es
+de mi propiedad intelectual. Si usted es un programador que desea
+utilizar o modificar el código de JavaScript debe obtener mi permiso.
+Póngase en contacto conmigo en la dirección de correo electrónico y me
+dice el propósito, la forma, y la intención de modificar el código. </p>
+      <p><b>¿Preguntas?</b> ¿Sugerencias? ¿Gratitud? 
+Envíeme un email 
+(en Inglés, por favor): <img
+ alt="email address de John"
+ src="http://www.csc.calpoly.edu/%7Ejdalbey/mailtojohn.png" height="22"
+ width="187"> </p>
+      </td>
+      <td valign="top">
+      <center>
+      <h2><font face="Verdana" size="2"><font face="Verdana" size="2">Ejemplo
+del calendario</font></font></h2>
+      <font face="Verdana" size="2"><font size="1"><i>Tamaño reducido</i></font></font>
+      </center>
+      <table bordercolordark="#000000" bordercolorlight="#FFFFFF"
+ width="100%" border="1" cellpadding="5">
+        <tbody>
+          <tr>
+            <th valign="center" width="14%" align="center"
+ bgcolor="#000000"><font face="Verdana" size="1" color="#ffffff"> Dom</font></th>
+            <th valign="center" width="14%" align="center"
+ bgcolor="#000000"><font face="Verdana" size="1" color="#ffffff"> Lun</font></th>
+            <th valign="center" width="14%" align="center"
+ bgcolor="#000000"><font face="Verdana" size="1" color="#ffffff"> Mar</font></th>
+            <th valign="center" width="14%" align="center"
+ bgcolor="#000000"><font face="Verdana" size="1" color="#ffffff">Mie</font></th>
+            <th valign="center" width="14%" align="center"
+ bgcolor="#000000"><font face="Verdana" size="1" color="#ffffff">Jue</font></th>
+            <th valign="center" width="14%" align="center"
+ bgcolor="#000000"><font face="Verdana" size="1" color="#ffffff">Vie</font></th>
+            <th valign="center" width="14%" align="center"
+ bgcolor="#000000"><font face="Verdana" size="1" color="#ffffff"> Sab</font></th>
+          </tr>
+          <tr>
+            <td valign="top" width="14%" align="left"><font
+ face="Verdana" size="1">1</font><br>
+            <br>
+            </td>
+            <td valign="top" width="14%" align="left"><font
+ face="Verdana" size="1">2</font><br>
+            <br>
+            </td>
+            <td valign="top" width="14%" align="left"><font
+ face="Verdana" size="1">3</font><br>
+            <br>
+            </td>
+            <td valign="top" width="14%" align="left"><font
+ face="Verdana" size="1">4</font><br>
+            <br>
+            </td>
+            <td valign="top" width="14%" align="left"><font
+ face="Verdana" size="1">5</font><br>
+            <br>
+            </td>
+            <td valign="top" width="14%" align="left"><font
+ face="Verdana" size="1">6</font><br>
+            <br>
+            </td>
+            <td valign="top" width="14%" align="left"><font
+ face="Verdana" size="1">7</font><br>
+            <br>
+            </td>
+          </tr>
+          <tr>
+            <td valign="top" width="14%" align="left"><font
+ face="Verdana" size="1">8</font><br>
+            <br>
+            </td>
+            <td valign="top" width="14%" align="left"><font
+ face="Verdana" size="1">9</font><br>
+            <br>
+            </td>
+            <td valign="top" width="14%" align="left"><font
+ face="Verdana" size="1">10</font><br>
+            <br>
+            </td>
+            <td valign="top" width="14%" align="left"><font
+ face="Verdana" size="1">11</font><br>
+            <br>
+            </td>
+            <td valign="top" width="14%" align="left"><font
+ face="Verdana" size="1">12</font><br>
+            <br>
+            </td>
+            <td valign="top" width="14%" align="left"><font
+ face="Verdana" size="1">13</font><br>
+            <br>
+            </td>
+            <td valign="top" width="14%" align="left"><font
+ face="Verdana" size="1">14</font><br>
+            <br>
+            </td>
+          </tr>
+          <tr>
+            <td valign="top" width="14%" align="left"><font
+ face="Verdana" size="1">15</font><br>
+            <br>
+            </td>
+            <td valign="top" width="14%" align="left"><font
+ face="Verdana" size="1">16</font><br>
+            <br>
+            </td>
+            <td valign="top" width="14%" align="left"><font
+ face="Verdana" size="1">17</font><br>
+            <br>
+            </td>
+            <td valign="top" width="14%" align="left"><font
+ face="Verdana" size="1">18</font><br>
+            <br>
+            </td>
+            <td valign="top" width="14%" align="left"><font
+ face="Verdana" size="1">19</font><br>
+            <br>
+            </td>
+            <td valign="top" width="14%" align="left"><font
+ face="Verdana" size="1">20</font><br>
+            <br>
+            </td>
+            <td valign="top" width="14%" align="left"><font
+ face="Verdana" size="1">21</font><br>
+            <br>
+            </td>
+          </tr>
+          <tr>
+            <td valign="top" width="14%" align="left"><font
+ face="Verdana" size="1">22</font><br>
+            <br>
+            </td>
+            <td valign="top" width="14%" align="left"><font
+ face="Verdana" size="1">23</font><br>
+            <br>
+            </td>
+            <td valign="top" width="14%" align="left"><font
+ face="Verdana" size="1">24</font><br>
+            <br>
+            </td>
+            <td valign="top" width="14%" align="left"><font
+ face="Verdana" size="1">25</font><br>
+            <br>
+            </td>
+            <td valign="top" width="14%" align="left"><font
+ face="Verdana" size="1">26</font><br>
+            <br>
+            </td>
+            <td valign="top" width="14%" align="left"><font
+ face="Verdana" size="1">27</font><br>
+            <br>
+            </td>
+            <td valign="top" width="14%" align="left"><font
+ face="Verdana" size="1">28</font><br>
+            <br>
+            </td>
+          </tr>
+          <tr>
+            <td valign="top" width="14%" align="left"><font
+ face="Verdana" size="1">29</font><br>
+            <br>
+            </td>
+            <td valign="top" width="14%" align="left"><font
+ face="Verdana" size="1">30</font><br>
+            <br>
+            </td>
+            <td valign="top" width="14%" align="left"><font
+ face="Verdana" size="1">31</font><br>
+            <br>
+            </td>
+            <td valign="top" width="14%" align="left">&nbsp;<br>
+            <br>
+            </td>
+            <td valign="top" width="14%" align="left">&nbsp;<br>
+            <br>
+            </td>
+            <td valign="top" width="14%" align="left">&nbsp;<br>
+            <br>
+            </td>
+            <td valign="top" width="14%" align="left">&nbsp;<br>
+            <br>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <br>
+      <p></p>
+      <center><font face="Verdana" size="2"><font size="1">generado por
+      <a href="../%7Ejdalbey/CalendarMaker.html">HTML Calendar Maker
+1.1.</a> Copyright (C) 2009 John Dalbey.</font></font></center>
+      </td>
+    </tr>
+    <tr>
+      <td valign="top"><br>
+      </td>
+      <td valign="top"><br>
+      </td>
+    </tr>
+  </tbody>
+</table>
+<p>
+<b>Traducci&oacute;n:</b> Arturo Jaramillo
+</p>
+<p>
+<b>Ejemplos:</b> Aquí están algunos sitios que usan este calendario.<br>
+</p>
+<ul>
+  <li><a href="http://www.pwlt.org/calendar.htm">Prince William Little
+Theatre</a> </li>
+  <li><a href="http://www.idcsc.org/calendar.html">Idaho Coalition For
+Sustainable Communities</a> </li>
+  <li><a
+ href="http://www.moreheadstate.edu/orgs/phisigmapi/index.aspx?id=9964">Morehead
+State University Phi Sigma Pi chapter</a> </li>
+  <li><a href="http://www.mwphgl-va.org/calendar.html">Most Worshipful
+Prince Hall Grand Lodge of Virginia</a> <br>
+Uses a handy navigation bar for jumping between months. </li>
+  <li><a href="http://www.ivorytiger.com/main.htm">Ivory Tiger band</a>
+  </li>
+</ul>
+<hr><font size="1">Creador de calendario en HTML
+Calendario Generador
+Creador de calendario en HTML
+Calendario Generador
+Creador de calendario en HTML
+Calendario Generador
+</font>
+<hr>
+</body>
+</html>

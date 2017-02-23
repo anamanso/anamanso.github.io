@@ -1,0 +1,70 @@
+h1 {
+	font-family: Seasider;
+	font-size: 100px;
+	color: black;
+	margin: 10px 150px 50px 240px;
+}
+body {
+	font-family: Futura, bold;
+	font-size: 18px;
+	color: black;
+}
+#menu{
+	font-family: Futura, bold;
+	font-size: 22px;
+	color: turquoise;
+	margin: 50px 400px 25px 400px;
+}
+#menu a{
+	text-decoration: none;
+}
+#who{
+	height: 100px;
+	border: 3px black solid;
+	margin: 50px 150px 25px 150px center;
+	color: turquoise;
+	font-size:14px;
+	font-family: Helvetica;
+}
+div>img{
+	height: 200px;
+	border: 3px black solid;
+	margin: 15px;
+}
+#trakai {
+	font-family: Helvetica;
+	color: black;
+	margin: center-left;
+	font-size: 12px;
+	height: 130px;
+	width: 310px;
+	border: 4px solid black;
+	margin: 20px 50px 10px 5px;
+}
+#logo {
+	width: 30px;
+	height:70px;
+	margin: left-side;
+}
+#logo img{
+ border: 0;	
+}	
+#calendar {
+	width: 50px;
+	height:90px;
+	border: 3px black solid;
+	margin: right-side;
+}
+#text1 {
+	width: 400px;
+	height:100px;
+	border: 3px black solid;
+	margin: right-side;
+	font-size: 12px;
+	font-family: Helvetica;
+}
+#yo {
+	width: 15px;
+	height: 50px;
+	
+}	
